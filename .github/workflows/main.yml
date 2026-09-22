@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. تفريغ مساحة القرص بطريقة سريعة وبدون صراعات مع مسارات apt
+    # 1. تفريغ مساحة القرص بأوامر سريعة وآمنة
     - name: Free Disk Space
       run: |
         sudo rm -rf /usr/share/dotnet
@@ -21,52 +21,36 @@ jobs:
         sudo rm -rf /usr/local/share/boost
         sudo apt-get clean
 
-    # 2. تنظيف وتثبيت الحزم وأدوات البناء
-    - name: Install Build Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib \
-          gcc-multilib git git-lfs gnupg gperf lib32z1-dev libncurses-dev \
-          libgl1-mesa-dev libxml2-utils xsltproc zip zlib1g-dev python3 openjdk-17-jdk
-
-    # 3. جلب كود المستودع
+    # 2. جلب كود المستودع
     - name: Checkout Source
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
-    # 4. إعداد الـ CCache لتسريع البناء
-    - name: Setup CCache
-      uses: actions/cache@v4
+    # 3. إعداد بيئة Java / JDK
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       with:
-        path: ~/.ccache
-        key: ccache-${{ runner.os }}-gsi-${{ github.sha }}
-        restore-keys: |
-          ccache-${{ runner.os }}-gsi-
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'gradle'
 
-    # 5. تهيئة بيئة البناء وبناء وحدات Settings و SystemUI
-    - name: Build Settings & SystemUI for GSI
+    # 4. بناء ملفات الـ APK باستخدام Gradle
+    - name: Build APKs with Gradle
       run: |
-        export CCACHE_DIR=~/.ccache
-        export USE_CCACHE=1
-        ccache -M 15G
-        
-        # تهيئة البيئة
-        source build/envsetup.sh
-        
-        # اختيار هدف الـ GSI
-        lunch treble_arm64_bgN-userdebug || lunch crdroid_arm64-userdebug || lunch aosp_arm64-userdebug
-        
-        # بناء الوحدات المعدلة فقط
-        m Settings SystemUI
+        if [ -f "./gradlew" ]; then
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        else
+          echo "لم يتم العثور على gradlew، يرجى التأكد من رفع ملفات مشروع Gradle إلى المستودع."
+          exit 1
+        fi
 
-    # 6. رفع ملفات الـ APK الناتجة
+    # 5. رفع ملفات الـ APK الناتجة لصفحة الـ Artifacts
     - name: Upload Built APKs
       uses: actions/upload-artifact@v4
       with:
         name: crDroid-GSI-APKs
         path: |
-          out/target/product/*/*/priv-app/SystemUI/*.apk
-          out/target/product/*/*/priv-app/Settings/*.apk
-          out/target/product/*/*/*/priv-app/SystemUI/*.apk
-          out/target/product/*/*/*/priv-app/Settings/*.apk
+          **/build/outputs/apk/**/*.apk
+ذ
