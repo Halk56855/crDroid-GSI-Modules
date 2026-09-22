@@ -5,6 +5,7 @@ on:
     branches: [ "16.0", "main", "12.x" ]
   pull_request:
     branches: [ "16.0" ]
+  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً من واجهة GitHub
 
 jobs:
   build:
@@ -21,13 +22,13 @@ jobs:
         remove-android: 'false'
         remove-haskell: 'true'
 
-    # 2. تثبيت الحزم وأدوات البناء
+    # 2. تثبيت الحزم وأدوات البناء (تم تصحيح lib32ncurses-dev)
     - name: Install Build Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib \
-          gcc-multilib git git-lfs gnupg gperf lib32ncurses5-dev lib32z1-dev \
-          libgl1-mesa-dev libxml2-utils xsltproc zip zlib1g-dev python3 openjdk-17-jdk
+          gcc-multilib git git-lfs gnupg gperf lib32z1-dev libncurses5-dev libncurses6-dev \
+          lib32ncurses-dev libgl1-mesa-dev libxml2-utils xsltproc zip zlib1g-dev python3 openjdk-17-jdk
 
     # 3. جلب كود المستودع
     - name: Checkout Source
@@ -35,7 +36,7 @@ jobs:
       with:
         fetch-depth: 1
 
-    # 4. إعداد الـ CCache لتسريع البناء
+    # 4. إعداد الـ CCache لتسريع عملية البناء المستقبلية
     - name: Setup CCache
       uses: actions/cache@v4
       with:
@@ -44,7 +45,7 @@ jobs:
         restore-keys: |
           ccache-${{ runner.os }}-gsi-
 
-    # 5. تهيئة بيئة البناء واختيار هدف الـ GSI
+    # 5. تهيئة بيئة البناء وبناء وحدات Settings و SystemUI
     - name: Build Settings & SystemUI for GSI
       run: |
         export CCACHE_DIR=~/.ccache
@@ -54,19 +55,19 @@ jobs:
         # تهيئة البيئة
         source build/envsetup.sh
         
-        # اختيار هدف الـ GSI الافتراضي (ARM64 GSI Target)
+        # اختيار هدف الـ GSI (محاولة الأهداف المتاحة)
         lunch treble_arm64_bgN-userdebug || lunch crdroid_arm64-userdebug || lunch aosp_arm64-userdebug
         
         # بناء الوحدات المعدلة فقط
         m Settings SystemUI
 
-    # 6. رفع ملفات الـ APK الناتجة
+    # 6. رفع ملفات الـ APK الناتجة لصفحة الـ Artifacts
     - name: Upload Built APKs
       uses: actions/upload-artifact@v4
       with:
         name: crDroid-GSI-APKs
         path: |
-          out/target/product/tdgsi_arm64_ab/system/system_ext/priv-app/SystemUI/*.apk
-          out/target/product/tdgsi_arm64_ab/system/system_ext/priv-app/Settings/*.apk
-          out/target/product/generic_arm64/system/system_ext/priv-app/SystemUI/*.apk
-          out/target/product/generic_arm64/system/system_ext/priv-app/Settings/*.apk
+          out/target/product/*/*/priv-app/SystemUI/*.apk
+          out/target/product/*/*/priv-app/Settings/*.apk
+          out/target/product/*/*/*/priv-app/SystemUI/*.apk
+          out/target/product/*/*/*/priv-app/Settings/*.apk
