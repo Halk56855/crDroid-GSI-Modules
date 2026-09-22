@@ -5,7 +5,7 @@ on:
     branches: [ "16.0", "main", "12.x" ]
   pull_request:
     branches: [ "16.0" ]
-  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً من واجهة GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -22,13 +22,13 @@ jobs:
         remove-android: 'false'
         remove-haskell: 'true'
 
-    # 2. تثبيت الحزم وأدوات البناء (تم تصحيح lib32ncurses-dev)
+    # 2. تثبيت الحزم وأدوات البناء (متوافق مع Ubuntu 24.04 / Noble)
     - name: Install Build Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib \
-          gcc-multilib git git-lfs gnupg gperf lib32z1-dev libncurses5-dev libncurses6-dev \
-          lib32ncurses-dev libgl1-mesa-dev libxml2-utils xsltproc zip zlib1g-dev python3 openjdk-17-jdk
+          gcc-multilib git git-lfs gnupg gperf lib32z1-dev libncurses-dev \
+          libgl1-mesa-dev libxml2-utils xsltproc zip zlib1g-dev python3 openjdk-17-jdk
 
     # 3. جلب كود المستودع
     - name: Checkout Source
@@ -55,13 +55,13 @@ jobs:
         # تهيئة البيئة
         source build/envsetup.sh
         
-        # اختيار هدف الـ GSI (محاولة الأهداف المتاحة)
+        # اختيار هدف الـ GSI
         lunch treble_arm64_bgN-userdebug || lunch crdroid_arm64-userdebug || lunch aosp_arm64-userdebug
         
         # بناء الوحدات المعدلة فقط
         m Settings SystemUI
 
-    # 6. رفع ملفات الـ APK الناتجة لصفحة الـ Artifacts
+    # 6. رفع ملفات الـ APK الناتجة
     - name: Upload Built APKs
       uses: actions/upload-artifact@v4
       with:
