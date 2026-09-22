@@ -53,4 +53,4 @@ jobs:
         name: crDroid-GSI-APKs
         path: |
           **/build/outputs/apk/**/*.apk
-ذ
+
